@@ -1,0 +1,10 @@
+.vs/
+bin/
+obj/
+packages/
+TestResults/
+*.suo
+*.user
+LNF.WebApi.Scheduler/Web.config
+LNF.WebApi.Scheduler/Web.Debug.config
+LNF.WebApi.Scheduler/Web.Release.config
