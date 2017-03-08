@@ -15,7 +15,7 @@ namespace LNF.WebApi.Scheduler.Controllers
 {
     public class ServiceController : ApiController
     {
-        [HttpGet]
+        [HttpGet, HttpPost]
         [Route("service/task-5min")]
         public async Task<bool> RunFiveMinuteTask()
         {
@@ -34,7 +34,8 @@ namespace LNF.WebApi.Scheduler.Controllers
             }
         }
 
-        [HttpGet, Route("service/task-daily")]
+        [HttpGet, HttpPost]
+        [Route("service/task-daily")]
         public async Task<bool> RunDailyTask(bool noEmail = false)
         {
             bool result = true;
@@ -74,15 +75,8 @@ namespace LNF.WebApi.Scheduler.Controllers
             return result;
         }
 
-        [HttpGet, Route("service/expiration-check")]
-        public async Task<bool> RunExpirationCheck()
-        {
-            RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-            await roomAccessExpirationCheck.Run();
-            return true;
-        }
-
-        [HttpGet, Route("service/task-monthly")]
+        [HttpGet, HttpPost]
+        [Route("service/task-monthly")]
         public async Task<bool> RunMonthlyTask(bool noEmail = false)
         {
             try
@@ -143,6 +137,16 @@ namespace LNF.WebApi.Scheduler.Controllers
             }
         }
 
+        [HttpGet, HttpPost]
+        [Route("service/expiration-check")]
+        public async Task<bool> RunExpirationCheck()
+        {
+            RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
+            await roomAccessExpirationCheck.Run();
+            return true;
+        }
+
+        [HttpGet, HttpPost]
         [Route("service/expiring-cards")]
         public async Task<DataFeedModel<ExpiringCard>> GetExpiringCards()
         {
