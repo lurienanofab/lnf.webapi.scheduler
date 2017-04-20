@@ -126,6 +126,7 @@ namespace LNF.WebApi.Scheduler
             if (rsvMain == null) return false;
 
             Reservation rsv = rsvMain;
+
             while (true)  // this will loop through all linked reservations and update them.
             {
                 if (accountId.HasValue && rsv.Account.AccountID != accountId.Value)
@@ -192,7 +193,7 @@ namespace LNF.WebApi.Scheduler
             }
 
             if (sendEmail)
-                EmailUtility.EmailOnForgiveCharge(rsv, forgivenAmount, true);
+                EmailUtility.EmailOnForgiveCharge(rsv, forgivenAmount, true, clientId);
 
             return true;
         }
