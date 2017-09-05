@@ -10,10 +10,10 @@ namespace LNF.WebApi.Scheduler.Models
 {
     public class RoomAccessExpirationCheck
     {
-        public async Task Run()
+        public async Task<int> Run()
         {
             var dataFeed = await GetDataFeed();
-            EmailExpiringCards(dataFeed.Data["default"]);
+            return EmailExpiringCards(dataFeed.Data["default"]);
         }
 
         private DateTime GetMinDateTime(DateTime d1, DateTime d2)
@@ -24,8 +24,10 @@ namespace LNF.WebApi.Scheduler.Models
                 return d2;
         }
 
-        private void EmailExpiringCards(IEnumerable<ExpiringCard> data)
+        private int EmailExpiringCards(IEnumerable<ExpiringCard> data)
         {
+            int count = 0;
+
             foreach (var item in data)
             {
                 if (!item.Email.StartsWith("none"))
@@ -38,6 +40,7 @@ namespace LNF.WebApi.Scheduler.Models
                         string body = string.Format("{1}{0}{0}Your LNF access card is set to expire on {2}. Please update your safety training per information on www.LNF.umich.edu/getting-access/", Environment.NewLine, item.DisplayName, GetMinDateTime(item.CardExpireDate, item.BadgeExpireDate));
 
                         Providers.Email.SendMessage(0, "LNF.Scheduler.Service.Process.CheckClientIssues.EmailExpiringCards", subj, body, from, new[] { item.Email });
+                        count++;
                     }
                     catch
                     {
@@ -45,6 +48,8 @@ namespace LNF.WebApi.Scheduler.Models
                     }
                 }
             }
+
+            return count;
         }
 
         public async Task<DataFeedModel<ExpiringCard>> GetDataFeed()

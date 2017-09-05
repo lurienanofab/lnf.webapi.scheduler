@@ -105,7 +105,7 @@ namespace LNF.WebApi.Scheduler.Controllers
 
                     // This sends room expiration emails
                     RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-                    await roomAccessExpirationCheck.Run();
+                    int count = await roomAccessExpirationCheck.Run();
 
                     ////2009-08-01 Populate the BillingTables
 
@@ -139,11 +139,11 @@ namespace LNF.WebApi.Scheduler.Controllers
 
         [HttpGet, HttpPost]
         [Route("service/expiration-check")]
-        public async Task<bool> RunExpirationCheck()
+        public async Task<int> RunExpirationCheck()
         {
             RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-            await roomAccessExpirationCheck.Run();
-            return true;
+            int count = await roomAccessExpirationCheck.Run();
+            return count;
         }
 
         [HttpGet, HttpPost]
