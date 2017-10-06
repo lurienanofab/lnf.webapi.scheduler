@@ -3,9 +3,9 @@ using LNF.Models.Billing;
 using LNF.Models.Billing.Process;
 using LNF.Models.Billing.Reports;
 using LNF.Models.Data;
+using LNF.Models.Scheduler;
 using LNF.Scheduler;
 using LNF.WebApi.Scheduler.Models;
-using OnlineServices.Api;
 using OnlineServices.Api.Billing;
 using System;
 using System.Threading.Tasks;
@@ -15,8 +15,7 @@ namespace LNF.WebApi.Scheduler.Controllers
 {
     public class ServiceController : ApiController
     {
-        [HttpGet, HttpPost]
-        [Route("service/task-5min")]
+        [HttpGet, Route("service/task-5min")]
         public async Task<bool> RunFiveMinuteTask()
         {
             try
@@ -34,8 +33,7 @@ namespace LNF.WebApi.Scheduler.Controllers
             }
         }
 
-        [HttpGet, HttpPost]
-        [Route("service/task-daily")]
+        [HttpGet, Route("service/task-daily")]
         public async Task<bool> RunDailyTask(bool noEmail = false)
         {
             bool result = true;
@@ -44,7 +42,7 @@ namespace LNF.WebApi.Scheduler.Controllers
             ResourceClientUtility.CheckExpiringClients(ResourceClientUtility.SelectExpiringClients(), ResourceClientUtility.SelectExpiringEveryone(), noEmail);
             ResourceClientUtility.CheckExpiredClients(ResourceClientUtility.SelectExpiredClients(), ResourceClientUtility.SelectExpiredEveryone(), noEmail);
 
-            using (BillingClient bc = await ApiProvider.NewBillingClient())
+            using (var bc = new BillingClient())
             {
                 BillingProcessResult bpr;
 
@@ -75,8 +73,7 @@ namespace LNF.WebApi.Scheduler.Controllers
             return result;
         }
 
-        [HttpGet, HttpPost]
-        [Route("service/task-monthly")]
+        [HttpGet, Route("service/task-monthly")]
         public async Task<bool> RunMonthlyTask(bool noEmail = false)
         {
             try
@@ -86,7 +83,7 @@ namespace LNF.WebApi.Scheduler.Controllers
                 // This is run at midnight on the 1st of the month. So the period should be the 1st of the previous month.
                 DateTime period = DateTime.Now.FirstOfMonth().AddMonths(-1);
 
-                using (BillingClient bc = await ApiProvider.NewBillingClient())
+                using (var bc = new BillingClient())
                 {
                     // This sends apportionment emails to clients
                     await bc.SendUserApportionmentReport(new UserApportionmentReportOptions()
@@ -137,22 +134,20 @@ namespace LNF.WebApi.Scheduler.Controllers
             }
         }
 
-        [HttpGet, HttpPost]
-        [Route("service/expiration-check")]
-        public async Task<int> RunExpirationCheck()
-        {
-            RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-            int count = await roomAccessExpirationCheck.Run();
-            return count;
-        }
-
-        [HttpGet, HttpPost]
-        [Route("service/expiring-cards")]
+        [HttpGet, Route("service/expiring-cards")]
         public async Task<DataFeedModel<ExpiringCard>> GetExpiringCards()
         {
             RoomAccessExpirationCheck check = new RoomAccessExpirationCheck();
             var dataFeed = await check.GetDataFeed();
             return dataFeed;
+        }
+
+        [HttpGet, Route("service/expiring-cards/email")]
+        public async Task<int> SendExpiringCardsEmail()
+        {
+            RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
+            int count = await roomAccessExpirationCheck.Run();
+            return count;
         }
     }
 }

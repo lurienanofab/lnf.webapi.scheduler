@@ -1,5 +1,6 @@
-﻿using Owin;
-using System.Web.Routing;
+﻿using Microsoft.Owin;
+
+[assembly: OwinStartup(typeof(LNF.WebApi.Scheduler.Startup))]
 
 namespace LNF.WebApi.Scheduler
 {
