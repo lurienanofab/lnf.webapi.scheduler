@@ -185,6 +185,7 @@
     <Compile Include="Controllers\ReservationRecurrenceController.cs" />
     <Compile Include="Controllers\ResourceController.cs" />
     <Compile Include="Controllers\ServiceController.cs" />
+    <Compile Include="Models\FiveMinuteTaskResult.cs" />
     <Compile Include="Models\RoomAccessExpirationCheck.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repository.cs" />

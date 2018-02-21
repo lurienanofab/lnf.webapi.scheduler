@@ -16,21 +16,24 @@ namespace LNF.WebApi.Scheduler.Controllers
     public class ServiceController : ApiController
     {
         [HttpGet, Route("service/task-5min")]
-        public async Task<bool> RunFiveMinuteTask()
+        public async Task<FiveMinuteTaskResult> RunFiveMinuteTask()
         {
-            try
-            {
-                // every five minutes tasks
-                ReservationUtility.EndRepairReservations(ReservationUtility.SelectPastEndableRepair());
-                await ReservationUtility.EndAutoEndReservations(ReservationUtility.SelectAutoEnd());
-                ReservationUtility.EndUnstartedReservations(ReservationUtility.SelectPastUnstarted());
+            // every five minutes tasks
+            var pastEndableRepairReservations = ReservationUtility.SelectPastEndableRepair();
+            ReservationUtility.EndRepairReservations(pastEndableRepairReservations);
 
-                return true;
-            }
-            catch
+            var autoEndReservations = ReservationUtility.SelectAutoEnd();
+            await ReservationUtility.EndAutoEndReservations(autoEndReservations);
+
+            var pastUnstartedReservations = ReservationUtility.SelectPastUnstarted();
+            ReservationUtility.EndUnstartedReservations(pastUnstartedReservations);
+
+            return new FiveMinuteTaskResult()
             {
-                return false;
-            }
+                PastEndableRepairReservations = pastEndableRepairReservations.Count,
+                AutoEndReservations = autoEndReservations.Count,
+                PastUnstartedReservations = pastUnstartedReservations.Count
+            };
         }
 
         [HttpGet, Route("service/task-daily")]
