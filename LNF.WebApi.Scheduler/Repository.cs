@@ -12,6 +12,8 @@ namespace LNF.WebApi.Scheduler
 {
     public static class Repository
     {
+        public static IEmailManager EmailManager => DA.Use<IEmailManager>();
+
         public static ProcessInfo[] GetAllProcessInfos()
         {
             return DA.Current.Query<ProcessInfo>().ToArray();
@@ -193,7 +195,7 @@ namespace LNF.WebApi.Scheduler
             }
 
             if (sendEmail)
-                EmailUtility.EmailOnForgiveCharge(rsv, forgivenAmount, true, clientId);
+                EmailManager.EmailOnForgiveCharge(rsv, forgivenAmount, true, clientId);
 
             return true;
         }

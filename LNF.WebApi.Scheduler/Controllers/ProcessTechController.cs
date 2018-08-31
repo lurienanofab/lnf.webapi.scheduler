@@ -9,22 +9,22 @@ namespace LNF.WebApi.Scheduler.Controllers
     public class ProcessTechController : ApiController
     {
         [Route("proctech")]
-        public IEnumerable<ProcessTechModel> Get(bool? active = null, int labId = 0)
+        public IEnumerable<ProcessTechItem> Get(bool? active = null, int labId = 0)
         {
-            IEnumerable<ProcessTechModel> result;
+            IEnumerable<ProcessTechItem> result;
 
             if (active.HasValue)
-                result = Repository.GetProcessTechs(active.Value, labId).Model<ProcessTechModel>();
+                result = Repository.GetProcessTechs(active.Value, labId).Model<ProcessTechItem>();
             else
-                result = Repository.GetProcessTechs(labId).Model<ProcessTechModel>();
+                result = Repository.GetProcessTechs(labId).Model<ProcessTechItem>();
 
             return result.OrderBy(x => x.ProcessTechName).ToArray();
         }
 
         [Route("proctech/{processTechId}")]
-        public ProcessTechModel Get(int processTechId)
+        public ProcessTechItem Get(int processTechId)
         {
-            return Repository.GetProcessTech(processTechId).Model<ProcessTechModel>();
+            return Repository.GetProcessTech(processTechId).Model<ProcessTechItem>();
         }
     }
 }

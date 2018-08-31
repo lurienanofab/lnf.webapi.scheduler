@@ -1,7 +1,9 @@
 ﻿using LNF.Models.Scheduler;
 using LNF.Repository;
+using LNF.Repository.Scheduler;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Web.Http;
 
 namespace LNF.WebApi.Scheduler.Controllers
@@ -14,9 +16,9 @@ namespace LNF.WebApi.Scheduler.Controllers
         /// <param name="resourceId">The unique id of the Resource</param>
         /// <returns>A ResourceModel item</returns>
         [Route("resource/{resourceId}")]
-        public ResourceModel Get(int resourceId)
+        public ResourceItem Get(int resourceId)
         {
-            return DA.Scheduler.Resource.Single(resourceId).Model<ResourceModel>();
+            return DA.Current.Single<ResourceInfo>(resourceId).Model<ResourceItem>();
         }
 
         /// <summary>
@@ -24,9 +26,9 @@ namespace LNF.WebApi.Scheduler.Controllers
         /// </summary>
         /// <returns>A collection of ResoureModel items</returns>
         [HttpGet, Route("resource/active")]
-        public IEnumerable<ResourceModel> SelectActiveResources()
+        public IEnumerable<ResourceItem> SelectActiveResources()
         {
-            return DA.Scheduler.Resource.SelectActive().Model<ResourceModel>();
+            return DA.Current.Query<ResourceInfo>().Where(x => x.IsActive).Model<ResourceItem>();
         }
 
         /// <summary>
@@ -35,27 +37,23 @@ namespace LNF.WebApi.Scheduler.Controllers
         /// <param name="search">The lab for which to search. When omitted only resources from the default labs will be selected. Allowed values [default|all|#] where # is the LabID.</param>
         /// <returns>A collection of ResourceModel items</returns>
         [HttpGet, Route("resource/active/lab/{search?}")]
-        public IEnumerable<ResourceModel> SelectByLab(string search = "default")
+        public IEnumerable<ResourceItem> SelectByLab(string search = "default")
         {
             //Note that search = 0 and search = "all" have the same result.
 
-            switch (search)
+            if (search == "all" || search == "0")
+                return DA.Current.Query<ResourceInfo>().Where(x => x.IsActive).Model<ResourceItem>();
+            else
             {
-                case "default":
-                    return DA.Scheduler.Resource.SelectByLab(null).Model<ResourceModel>();
-                case "all":
-                    return DA.Scheduler.Resource.SelectByLab(0).Model<ResourceModel>();
-                default:
-                    return DA.Scheduler.Resource.SelectByLab(int.Parse(search)).Model<ResourceModel>();
+                int labId = search == "default" ? 1 : int.Parse(search);
+                return DA.Current.Query<ResourceInfo>().Where(x => x.IsActive && x.LabID == labId).Model<ResourceItem>();
             }
         }
 
         [Route("resource/offset")]
         public IEnumerable<int> GetOffsets(int granularity)
         {
-            var result = new List<int>();
-
-            result.Add(0);
+            var result = new List<int> { 0 };
 
             if (granularity > 60)
                 result.Add(1);

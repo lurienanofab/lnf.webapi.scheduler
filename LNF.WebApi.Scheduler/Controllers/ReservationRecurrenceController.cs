@@ -12,9 +12,9 @@ namespace LNF.WebApi.Scheduler.Controllers
         /// <param name="reservationRecurrenceId">The id for a single reservation recurrence.</param>
         /// <returns>A ReservationRecurrenceModel item.</returns>
         [Route("reservation-recurrence/{reservationRecurrenceId}")]
-        public ReservationRecurrenceModel GetReservation(int reservationRecurrenceId)
+        public ReservationRecurrenceItem GetReservation(int reservationRecurrenceId)
         {
-            return Repository.GetReservationRecurrence(reservationRecurrenceId).Model<ReservationRecurrenceModel>();
+            return Repository.GetReservationRecurrence(reservationRecurrenceId).Model<ReservationRecurrenceItem>();
         }
     }
 }

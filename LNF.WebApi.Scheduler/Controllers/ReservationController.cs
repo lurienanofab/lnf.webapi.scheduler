@@ -1,6 +1,4 @@
-﻿using LNF.Data;
-using LNF.Models.Data;
-using LNF.Models.Scheduler;
+﻿using LNF.Models.Scheduler;
 using LNF.Repository;
 using LNF.Repository.Data;
 using LNF.Repository.Scheduler;
@@ -14,6 +12,8 @@ namespace LNF.WebApi.Scheduler.Controllers
 {
     public class ReservationController : ApiController
     {
+        public IReservationManager ReservationManager => DA.Use<IReservationManager>();
+
         [Route("reservation/{reservationId}")]
         public ReservationItem GetReservation(int reservationId)
         {
@@ -78,11 +78,11 @@ namespace LNF.WebApi.Scheduler.Controllers
 
                 var currentUser = clients.First(c => c.ClientID == cid.GetValueOrDefault(x.ClientID));
 
-                var args = ReservationStateArgs.Create(x, currentUser, inlab, invitees, resourceClients);
+                var args = ReservationStateArgs.Create(x, currentUser, inlab, invitees, resourceClients, ReservationManager);
 
                 try
                 {
-                    var state = ReservationUtility.GetReservationState(args);
+                    var state = ReservationManager.GetReservationState(args);
 
                     return new ReservationStateItem()
                     {

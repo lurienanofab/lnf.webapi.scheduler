@@ -61,10 +61,9 @@ namespace LNF.WebApi.Scheduler.Models
 
                         string[] cc = GetExpiringCardsEmailRecipients();
 
-                        var sendMessageResult = Providers.Email.SendMessage(0, "LNF.Scheduler.Service.Process.CheckClientIssues.EmailExpiringCards", subj, body, from, new[] { item.Email }, cc);
+                        ServiceProvider.Current.Email.SendMessage(0, "LNF.Scheduler.Service.Process.CheckClientIssues.EmailExpiringCards", subj, body, from, new[] { item.Email }, cc);
 
-                        if (sendMessageResult.Success)
-                            count++;
+                        count++;
                     }
                     catch
                     {

@@ -8,21 +8,21 @@ namespace LNF.WebApi.Scheduler.Controllers
     public class ProcessInfoLineController : ApiController
     {
         [Route("process-info-line")]
-        public IEnumerable<ProcessInfoLineModel> Get()
+        public IEnumerable<ProcessInfoLineItem> Get()
         {
-            return Repository.GetAllProcessInfoLines().Model<ProcessInfoLineModel>();
+            return Repository.GetAllProcessInfoLines().Model<ProcessInfoLineItem>();
         }
 
         [Route("process-info-line/{processInfoLineId}")]
-        public ProcessInfoLineModel Get(int processInfoLineId)
+        public ProcessInfoLineItem Get(int processInfoLineId)
         {
-            return Repository.GetProcessInfoLine(processInfoLineId).Model<ProcessInfoLineModel>();
+            return Repository.GetProcessInfoLine(processInfoLineId).Model<ProcessInfoLineItem>();
         }
 
         [Route("process-info-line/process-info/{processInfoId}")]
-        public IEnumerable<ProcessInfoLineModel> GetByProcessInfo(int processInfoId)
+        public IEnumerable<ProcessInfoLineItem> GetByProcessInfo(int processInfoId)
         {
-            return Repository.GetProcessInfoLineByProcessInfo(processInfoId).Model<ProcessInfoLineModel>();
+            return Repository.GetProcessInfoLineByProcessInfo(processInfoId).Model<ProcessInfoLineItem>();
         }
     }
 }

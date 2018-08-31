@@ -4,6 +4,7 @@ using LNF.Models.Billing.Process;
 using LNF.Models.Billing.Reports;
 using LNF.Models.Data;
 using LNF.Models.Scheduler;
+using LNF.Repository;
 using LNF.Scheduler;
 using LNF.WebApi.Scheduler.Models;
 using OnlineServices.Api.Billing;
@@ -15,18 +16,20 @@ namespace LNF.WebApi.Scheduler.Controllers
 {
     public class ServiceController : ApiController
     {
+        public IReservationManager ReservationManager => DA.Use<IReservationManager>();
+
         [HttpGet, Route("service/task-5min")]
         public async Task<FiveMinuteTaskResult> RunFiveMinuteTask()
         {
             // every five minutes tasks
-            var pastEndableRepairReservations = ReservationUtility.SelectPastEndableRepair();
-            ReservationUtility.EndRepairReservations(pastEndableRepairReservations);
+            var pastEndableRepairReservations = ReservationManager.SelectPastEndableRepair();
+            ReservationManager.EndRepairReservations(pastEndableRepairReservations);
 
-            var autoEndReservations = ReservationUtility.SelectAutoEnd();
-            await ReservationUtility.EndAutoEndReservations(autoEndReservations);
+            var autoEndReservations = ReservationManager.SelectAutoEnd();
+            await ReservationManager.EndAutoEndReservations(autoEndReservations);
 
-            var pastUnstartedReservations = ReservationUtility.SelectPastUnstarted();
-            ReservationUtility.EndUnstartedReservations(pastUnstartedReservations);
+            var pastUnstartedReservations = ReservationManager.SelectPastUnstarted();
+            ReservationManager.EndUnstartedReservations(pastUnstartedReservations);
 
             return new FiveMinuteTaskResult()
             {
