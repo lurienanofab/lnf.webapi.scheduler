@@ -1,30 +1,32 @@
-﻿using LNF.Models.Scheduler;
-using LNF.Repository;
+﻿using LNF.Impl;
+using LNF.Scheduler;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 
 namespace LNF.WebApi.Scheduler.Controllers
 {
-    public class ProcessTechController : ApiController
+    public class ProcessTechController : SchedulerApiController
     {
-        [Route("proctech")]
-        public IEnumerable<ProcessTechItem> Get(bool? active = null, int labId = 0)
+        public ProcessTechController(IProvider provider) : base(provider) { }
+
+        [HttpGet, Route("proctech")]
+        public IEnumerable<IProcessTech> GetMany(bool? active = null, int labId = 0)
         {
-            IEnumerable<ProcessTechItem> result;
+            IEnumerable<IProcessTech> result;
 
             if (active.HasValue)
-                result = Repository.GetProcessTechs(active.Value, labId).Model<ProcessTechItem>();
+                result = Repository.GetProcessTechs(active.Value, labId).CreateModels<IProcessTech>();
             else
-                result = Repository.GetProcessTechs(labId).Model<ProcessTechItem>();
+                result = Repository.GetProcessTechs(labId).CreateModels<IProcessTech>();
 
             return result.OrderBy(x => x.ProcessTechName).ToArray();
         }
 
-        [Route("proctech/{processTechId}")]
-        public ProcessTechItem Get(int processTechId)
+        [HttpGet, Route("proctech/{processTechId}")]
+        public IProcessTech GetSingle([FromUri] int processTechId)
         {
-            return Repository.GetProcessTech(processTechId).Model<ProcessTechItem>();
+            return Repository.GetProcessTech(processTechId).CreateModel<IProcessTech>();
         }
     }
 }

@@ -1,28 +1,30 @@
-﻿using LNF.Models.Scheduler;
-using LNF.Repository;
+﻿using LNF.Impl;
+using LNF.Scheduler;
 using System.Collections.Generic;
 using System.Web.Http;
 
 namespace LNF.WebApi.Scheduler.Controllers
 {
-    public class ProcessInfoLineController : ApiController
+    public class ProcessInfoLineController : SchedulerApiController
     {
-        [Route("process-info-line")]
-        public IEnumerable<ProcessInfoLineItem> Get()
+        public ProcessInfoLineController(IProvider provider) : base(provider) { }
+
+        [HttpGet, Route("process-info-line")]
+        public IEnumerable<IProcessInfoLine> GetMany()
         {
-            return Repository.GetAllProcessInfoLines().Model<ProcessInfoLineItem>();
+            return Repository.GetAllProcessInfoLines().CreateModels<IProcessInfoLine>();
         }
 
-        [Route("process-info-line/{processInfoLineId}")]
-        public ProcessInfoLineItem Get(int processInfoLineId)
+        [HttpGet, Route("process-info-line/{processInfoLineId}")]
+        public IProcessInfoLine GetSingle([FromUri] int processInfoLineId)
         {
-            return Repository.GetProcessInfoLine(processInfoLineId).Model<ProcessInfoLineItem>();
+            return Repository.GetProcessInfoLine(processInfoLineId).CreateModel<IProcessInfoLine>();
         }
 
-        [Route("process-info-line/process-info/{processInfoId}")]
-        public IEnumerable<ProcessInfoLineItem> GetByProcessInfo(int processInfoId)
+        [HttpGet, Route("process-info-line/process-info/{processInfoId}")]
+        public IEnumerable<IProcessInfoLine> GetByProcessInfo([FromUri] int processInfoId)
         {
-            return Repository.GetProcessInfoLineByProcessInfo(processInfoId).Model<ProcessInfoLineItem>();
+            return Repository.GetProcessInfoLineByProcessInfo(processInfoId).CreateModels<IProcessInfoLine>();
         }
     }
 }

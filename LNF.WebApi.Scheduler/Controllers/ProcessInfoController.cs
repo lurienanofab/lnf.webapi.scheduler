@@ -1,65 +1,72 @@
-﻿using LNF.Models.Scheduler;
-using LNF.Repository;
-using System;
+﻿using LNF.Impl;
+using LNF.Impl.Repository.Scheduler;
+using LNF.Scheduler;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 
 namespace LNF.WebApi.Scheduler.Controllers
 {
-    public class ProcessInfoController : ApiController
+    public class ProcessInfoController : SchedulerApiController
     {
-        [Route("process-info")]
-        public IEnumerable<ProcessInfoItem> Get()
+        public ProcessInfoController(IProvider provider) : base(provider) { }
+
+        [HttpGet, Route("process-info")]
+        public IEnumerable<IProcessInfo> GetMany()
         {
-            return Repository.GetAllProcessInfos().Model<ProcessInfoItem>();
+            return Repository.GetAllProcessInfos().CreateModels<IProcessInfo>();
         }
 
-        [Route("process-info/{processInfoId}")]
-        public ProcessInfoItem Get(int processInfoId)
+        [HttpGet, Route("process-info/{processInfoId}")]
+        public IProcessInfo GetSingle([FromUri] int processInfoId)
         {
-            var result = Repository.GetProcessInfo(processInfoId).Model<ProcessInfoItem>();
+            var result = Repository.GetProcessInfo(processInfoId).CreateModel<IProcessInfo>();
             return result;
         }
-        [Route("process-info-details/resource/{resourceId}")]
-        public string GetProcessInfoDetailsByResource(int resourceId) // Returns Structure retrieved from Resource
+
+        [HttpGet, Route("process-info-details/resource/{resourceId}")]
+        public string GetProcessInfoDetailsByResource([FromUri] int resourceId) // Returns Structure retrieved from Resource
         {
-            IEnumerable<ProcessInfoItem> pis = Repository.GetProcessInfosByResource(resourceId).Model<ProcessInfoItem>();
+            IEnumerable<ProcessInfoItem> pis = Repository.GetProcessInfosByResource(resourceId).CreateModels<ProcessInfoItem>();
             IEnumerable<int> pi_ids = pis.Select(x => x.ProcessInfoID);
-            IEnumerable<ProcessInfoItem> pils = Repository.GetAllProcessInfoLinesFor(pi_ids).Model<ProcessInfoItem>();
-            Object obj = new { ProcessInfos = pis, ProcessInfoLines = pils };
-            return LNF.CommonTools.Utility.ToJson(obj);
+            IEnumerable<ProcessInfoItem> pils = Repository.GetAllProcessInfoLinesFor(pi_ids).CreateModels<ProcessInfoItem>();
+            object obj = new { ProcessInfos = pis, ProcessInfoLines = pils };
+            return CommonTools.Utility.ToJson(obj);
         }
-        [Route("process-info/resource/{resourceId}")]
-        public string GetProcessInfosByResource(int resourceId) // Returns Structure retrieved from Resource
+
+        [HttpGet, Route("process-info/resource/{resourceId}")]
+        public string GetProcessInfosByResource([FromUri] int resourceId) // Returns Structure retrieved from Resource
         {
-            IEnumerable<ProcessInfoItem> pis = Repository.GetProcessInfosByResource(resourceId).Model<ProcessInfoItem>();
+            IEnumerable<IProcessInfo> pis = Repository.GetProcessInfosByResource(resourceId).CreateModels<IProcessInfo>();
             return CommonTools.Utility.ToJson(pis);
         }
-        [Route("process-info-line/resource/{resourceId}")]
-        public string GetProcessInfoLinesByProcessInfos(int resourceId)
-        {
-            IEnumerable<ProcessInfoItem> pis = Repository.GetProcessInfosByResource(resourceId).Model<ProcessInfoItem>();
-            IEnumerable<int> pi_ids = pis.Select(x=>x.ProcessInfoID);
-            IEnumerable<ProcessInfoItem> pils = Repository.GetAllProcessInfoLinesFor(pi_ids).Model<ProcessInfoItem>();
 
+        [HttpGet, Route("process-info-line/resource/{resourceId}")]
+        public string GetProcessInfoLinesByProcessInfos([FromUri] int resourceId)
+        {
+            IEnumerable<IProcessInfo> pis = Repository.GetProcessInfosByResource(resourceId).CreateModels<IProcessInfo>();
+            int[] ids = pis.Select(x => x.ProcessInfoID).ToArray();
+            IEnumerable<IProcessInfo> pils = Repository.GetAllProcessInfoLinesFor(ids).CreateModels<IProcessInfo>();
             return CommonTools.Utility.ToJson(pils);
         }
-        [Route("reservation-process-infos/{reservationId}")]
-        public string GetReservationProcessInfosByReservation(int reservationId) // Retrieved from ReservationProcessInfo of a particular reservation
+
+        [HttpGet, Route("reservation-process-infos/{reservationId}")]
+        public string GetReservationProcessInfosByReservation([FromUri] int reservationId) // Retrieved from ReservationProcessInfo of a particular reservation
         {
-            IEnumerable<ProcessInfoItem> rpis = Repository.GetReservationProcessInfosByReservation(reservationId).Model<ProcessInfoItem>();
+            IEnumerable<IProcessInfo> rpis = Repository.GetReservationProcessInfosByReservation(reservationId).CreateModels<IProcessInfo>();
             return CommonTools.Utility.ToJson(rpis);
         }
-        [Route("reservation-process-infos-save/")]
-        public string SaveReservationProcessInfosByReservation(string[] jsonrpis)
+
+        [HttpPost, Route("reservation-process-infos-save")]
+        public string SaveReservationProcessInfosByReservation([FromBody] string[] jsons)
         {
-            //???????????????????????????????????Implement json to Object...
-            IEnumerable<LNF.Repository.Scheduler.ReservationProcessInfo> rpis = null;
-            foreach(LNF.Repository.Scheduler.ReservationProcessInfo rpi in rpis)
+            foreach (var value in jsons)
             {
-                DA.Current.SaveOrUpdate(rpi);
+                var rpi = JsonConvert.DeserializeObject<ReservationProcessInfo>(value);
+                DataSession.SaveOrUpdate(rpi);
             }
+
             return "saved";
         }
     }

@@ -1,28 +1,28 @@
-﻿using LNF.Models.Scheduler;
-using LNF.Repository;
-using LNF.Repository.Scheduler;
+﻿using LNF.Scheduler;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 
 namespace LNF.WebApi.Scheduler.Controllers
 {
-    public class LabController : ApiController
+    public class LabController : SchedulerApiController
     {
+        public LabController(IProvider provider) : base(provider) { }
+
         /// <summary>
         /// Gets all currently active labs
         /// </summary>
         /// <returns>A collection of LabItem objects</returns>
         [HttpGet, Route("lab/active")]
-        public IEnumerable<LabItem> SelectActiveLabs()
+        public IEnumerable<ILab> SelectActiveLabs()
         {
-            return DA.Current.Query<Lab>().Where(x => x.IsActive).Model<LabItem>().OrderBy(x => x.LabDisplayName);
+            return Provider.Scheduler.Resource.GetLabs().Where(x => x.BuildingIsActive && x.LabIsActive).OrderBy(x => x.LabDisplayName).ToList();
         }
 
         [Route("lab/{labId}")]
-        public LabItem Get(int labId)
+        public ILab Get(int labId)
         {
-            return DA.Current.Single<Lab>(labId).Model<LabItem>();
+            return Provider.Scheduler.Resource.GetLab(labId);
         }
     }
 }

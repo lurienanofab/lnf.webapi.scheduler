@@ -1,158 +1,153 @@
-﻿using LNF.CommonTools;
-using LNF.Models.Billing;
-using LNF.Models.Billing.Process;
-using LNF.Models.Billing.Reports;
-using LNF.Models.Data;
-using LNF.Models.Scheduler;
-using LNF.Repository;
+﻿using LNF.Billing;
+using LNF.Billing.Process;
+using LNF.Billing.Reports;
+using LNF.CommonTools;
+using LNF.Data;
+using LNF.PhysicalAccess;
 using LNF.Scheduler;
-using LNF.WebApi.Scheduler.Models;
-using OnlineServices.Api.Billing;
+using LNF.Scheduler.Service;
 using System;
-using System.Threading.Tasks;
 using System.Web.Http;
 
 namespace LNF.WebApi.Scheduler.Controllers
 {
-    public class ServiceController : ApiController
+    public class ServiceController : SchedulerApiController
     {
-        public IReservationManager ReservationManager => DA.Use<IReservationManager>();
+        public ServiceController(IProvider provider) : base(provider) { }
 
         [HttpGet, Route("service/task-5min")]
-        public async Task<FiveMinuteTaskResult> RunFiveMinuteTask()
+        public FiveMinuteTaskResult RunFiveMinuteTask()
         {
             // every five minutes tasks
-            var pastEndableRepairReservations = ReservationManager.SelectPastEndableRepair();
-            ReservationManager.EndRepairReservations(pastEndableRepairReservations);
 
-            var autoEndReservations = ReservationManager.SelectAutoEnd();
-            await ReservationManager.EndAutoEndReservations(autoEndReservations);
+            var pastEndableRepairReservations = Provider.Scheduler.Reservation.SelectPastEndableRepair();
+            var autoEndReservations = Provider.Scheduler.Reservation.SelectAutoEnd();
+            var pastUnstartedReservations = Provider.Scheduler.Reservation.SelectPastUnstarted();
 
-            var pastUnstartedReservations = ReservationManager.SelectPastUnstarted();
-            ReservationManager.EndUnstartedReservations(pastUnstartedReservations);
+            var util = Reservations.Create(Provider, DateTime.Now);
 
-            return new FiveMinuteTaskResult()
+            return new FiveMinuteTaskResult
             {
-                PastEndableRepairReservations = pastEndableRepairReservations.Count,
-                AutoEndReservations = autoEndReservations.Count,
-                PastUnstartedReservations = pastUnstartedReservations.Count
+                EndRepairReservationsProcessResult = util.HandleRepairReservations(pastEndableRepairReservations),
+                EndUnstartedReservationsProcessResult = util.HandleUnstartedReservations(pastUnstartedReservations),
+                HandleAutoEndReservationsProcessResult = util.HandleAutoEndReservations(autoEndReservations)
             };
         }
 
         [HttpGet, Route("service/task-daily")]
-        public async Task<bool> RunDailyTask(bool noEmail = false)
+        public DailyTaskResult RunDailyTask(bool noEmail = false)
         {
-            bool result = true;
+            DateTime ed = DateTime.Now.Date.AddDays(-1); //must be yesterday
+            DateTime period = ed.FirstOfMonth();
 
-            // Check client tool auths
-            ResourceClientUtility.CheckExpiringClients(ResourceClientUtility.SelectExpiringClients(), ResourceClientUtility.SelectExpiringEveryone(), noEmail);
-            ResourceClientUtility.CheckExpiredClients(ResourceClientUtility.SelectExpiredClients(), ResourceClientUtility.SelectExpiredEveryone(), noEmail);
+            var bp = Provider.Billing.Process;
 
-            using (var bc = new BillingClient())
+            var expiringClients = ResourceClients.SelectExpiringClients();
+            var expiringEveryone = ResourceClients.SelectExpiringEveryone();
+            var expiredClients = ResourceClients.SelectExpiredClients();
+            var expiredEveryone = ResourceClients.SelectExpiredEveryone();
+
+            var result = new DailyTaskResult
             {
-                BillingProcessResult bpr;
+                // Check client tool auths
+                CheckExpiringClientsProcessResult = ResourceClients.CheckExpiringClients(expiringClients, expiringEveryone, noEmail),
+                CheckExpiredClientsProcessResult = ResourceClients.CheckExpiredClients(expiredClients, expiredEveryone, noEmail),
 
                 // Update Data and DataClean tables
-                bpr = await bc.BillingProcessDataUpdate(BillingCategory.Tool, true);
-                result = result && bpr.Success;
+                DataUpdateProcessResult = bp.Update(new UpdateCommand
+                {
+                    ClientID = 0,
+                    Period = period,
+                    BillingTypes = BillingCategory.Tool | BillingCategory.Room | BillingCategory.Store
+                }),
 
-                bpr = await bc.BillingProcessDataUpdate(BillingCategory.Room, true);
-                result = result && bpr.Success;
-
-                bpr = await bc.BillingProcessDataUpdate(BillingCategory.Store, true);
-                result = result && bpr.Success;
-
-                //2009-08-01 Populate the Billing temp tables
-                DateTime ed = DateTime.Now.Date.AddDays(-1); //must be yesterday
-                DateTime period = ed.FirstOfMonth();
-
-                bpr = await bc.BillingProcessStep1(BillingCategory.Tool, period, period.AddMonths(1), 0, 0, true, true);
-                result = result && bpr.Success;
-
-                bpr = await bc.BillingProcessStep1(BillingCategory.Room, period, period.AddMonths(1), 0, 0, true, true);
-                result = result && bpr.Success;
-
-                bpr = await bc.BillingProcessStep1(BillingCategory.Store, period, period.AddMonths(1), 0, 0, true, true);
-                result = result && bpr.Success;
-            }
+                BillingProcessStep1Result = bp.Step1(new Step1Command
+                {
+                    ClientID = 0,
+                    Record = 0,
+                    Period = period,
+                    Delete = true,
+                    IsTemp = true,
+                    BillingCategory = BillingCategory.Tool | BillingCategory.Room | BillingCategory.Store
+                }),
+            };
 
             return result;
         }
 
         [HttpGet, Route("service/task-monthly")]
-        public async Task<bool> RunMonthlyTask(bool noEmail = false)
+        public MonthlyTaskResult RunMonthlyTask(bool noEmail = false)
         {
-            try
+            // This is run at midnight on the 1st of the month. So the period should be the 1st of the previous month.
+            DateTime period = DateTime.Now.FirstOfMonth().AddMonths(-1);
+
+            var br = Provider.Billing.Report;
+            var bp = Provider.Billing.Process;
+
+            // This sends apportionment emails to clients
+            var userApportionmentReportCount = br.SendUserApportionmentReport(new UserApportionmentReportOptions
             {
-                bool result = true;
+                Period = period,
+                NoEmail = noEmail,
+                Message = null
+            }).TotalEmailsSent;
 
-                // This is run at midnight on the 1st of the month. So the period should be the 1st of the previous month.
-                DateTime period = DateTime.Now.FirstOfMonth().AddMonths(-1);
+            // 2008-04-30
+            // Monthly financial report
+            var financialManagerReportCount = br.SendFinancialManagerReport(new FinancialManagerReportOptions
+            {
+                ClientID = 0,
+                ManagerOrgID = 0,
+                Period = period,
+                IncludeManager = !noEmail,
+                Message = null
+            }).TotalEmailsSent;
 
-                using (var bc = new BillingClient())
+            // This sends room expiration emails
+            RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
+            var roomAccessExpirationCheckCount = roomAccessExpirationCheck.Run();
+
+            var result = new MonthlyTaskResult
+            {
+                UserApportionmentReportCount = userApportionmentReportCount,
+                FinancialManagerReportCount = financialManagerReportCount,
+                RoomAccessExpirationCheckCount = roomAccessExpirationCheckCount,
+
+                //2009-08-01 Populate the BillingTables
+                BillingProcessStep1Result = bp.Step1(new Step1Command
                 {
-                    // This sends apportionment emails to clients
-                    await bc.SendUserApportionmentReport(new UserApportionmentReportOptions()
-                    {
-                        Period = period,
-                        NoEmail = noEmail
-                    });
+                    ClientID = 0,
+                    Record = 0,
+                    Period = period,
+                    Delete = true,
+                    IsTemp = false,
+                    BillingCategory = BillingCategory.Tool | BillingCategory.Room | BillingCategory.Store
+                }),
 
-                    // 2008-04-30
-                    // Monthly financial report
-                    await bc.SendFinancialManagerReport(new FinancialManagerReportOptions()
-                    {
-                        Period = period,
-                        IncludeManager = !noEmail
-                    });
+                PopulateSubsidyBillingProcessResult = bp.Step4(new Step4Command
+                {
+                    ClientID = 0,
+                    Period = period,
+                    Command = "subsidy"
+                })
+            };
 
-                    // This sends room expiration emails
-                    RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-                    int count = await roomAccessExpirationCheck.Run();
-
-                    ////2009-08-01 Populate the BillingTables
-
-                    //first day of last month
-                    DateTime sd = period;
-                    DateTime ed = period.AddMonths(1);
-
-                    BillingProcessResult bpr;
-
-                    bpr = await bc.BillingProcessStep1(BillingCategory.Tool, sd, ed, 0, 0, false, true);
-                    result = result && bpr.Success;
-
-                    bpr = await bc.BillingProcessStep1(BillingCategory.Room, sd, ed, 0, 0, false, true);
-                    result = result && bpr.Success;
-
-                    bpr = await bc.BillingProcessStep1(BillingCategory.Store, sd, ed, 0, 0, false, true);
-                    result = result && bpr.Success;
-
-                    bpr = await bc.BillingProcessStep4("subsidy", sd, 0);
-                    result = result && bpr.Success;
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                string err = ex.Message;
-                return false;
-            }
+            return result;
         }
 
         [HttpGet, Route("service/expiring-cards")]
-        public async Task<DataFeedModel<ExpiringCard>> GetExpiringCards()
+        public DataFeedResult GetExpiringCards()
         {
             RoomAccessExpirationCheck check = new RoomAccessExpirationCheck();
-            var dataFeed = await check.GetDataFeed();
+            var dataFeed = check.GetDataFeed();
             return dataFeed;
         }
 
         [HttpGet, Route("service/expiring-cards/email")]
-        public async Task<int> SendExpiringCardsEmail()
+        public int SendExpiringCardsEmail()
         {
             RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-            int count = await roomAccessExpirationCheck.Run();
+            int count = roomAccessExpirationCheck.Run();
             return count;
         }
     }
