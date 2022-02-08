@@ -3,7 +3,6 @@ using LNF.Billing.Process;
 using LNF.Billing.Reports;
 using LNF.CommonTools;
 using LNF.Data;
-using LNF.PhysicalAccess;
 using LNF.Scheduler;
 using LNF.Scheduler.Service;
 using System;
@@ -104,8 +103,8 @@ namespace LNF.WebApi.Scheduler.Controllers
             }).TotalEmailsSent;
 
             // This sends room expiration emails
-            RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-            var roomAccessExpirationCheckCount = roomAccessExpirationCheck.Run();
+            var cardExpirationResult = Provider.Billing.Report.SendCardExpirationReport();
+            var roomAccessExpirationCheckCount = cardExpirationResult.TotalEmailsSent;
 
             var result = new MonthlyTaskResult
             {
@@ -138,17 +137,14 @@ namespace LNF.WebApi.Scheduler.Controllers
         [HttpGet, Route("service/expiring-cards")]
         public DataFeedResult GetExpiringCards()
         {
-            RoomAccessExpirationCheck check = new RoomAccessExpirationCheck();
-            var dataFeed = check.GetDataFeed();
-            return dataFeed;
+            return Provider.Data.Feed.GetDataFeedResult("expiring-cards");
         }
 
         [HttpGet, Route("service/expiring-cards/email")]
         public int SendExpiringCardsEmail()
         {
-            RoomAccessExpirationCheck roomAccessExpirationCheck = new RoomAccessExpirationCheck();
-            int count = roomAccessExpirationCheck.Run();
-            return count;
+            var result = Provider.Billing.Report.SendCardExpirationReport();
+            return result.TotalEmailsSent;
         }
     }
 }
